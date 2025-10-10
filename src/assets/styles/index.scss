@@ -5,6 +5,7 @@
 @import './sidebar.scss';
 @import './btn.scss';
 @import './ruoyi.scss';
+@import './error-notification.css';
 
 body {
   height: 100%;
@@ -96,6 +97,41 @@ div:focus {
     content: ' ';
     clear: both;
     height: 0;
+  }
+}
+
+/* 删除错误通知的换行样式 - 全局样式 */
+.delete-error-notification {
+  max-width: 600px !important;
+  min-width: 400px !important;
+  
+  .el-notification__content {
+    word-break: break-word !important;
+    line-height: 1.6 !important;
+    text-align: left !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  .el-notification__message {
+    word-break: break-word !important;
+    line-height: 1.6 !important;
+  }
+  
+  .el-notification__group {
+    .el-notification__content {
+      word-break: break-word !important;
+    }
+    
+    .el-notification__message {
+      word-break: break-word !important;
+    }
+  }
+  
+  // 确保br标签正确显示
+  br {
+    display: block !important;
+    margin: 0.5em 0 !important;
+    content: "" !important;
   }
 }
 

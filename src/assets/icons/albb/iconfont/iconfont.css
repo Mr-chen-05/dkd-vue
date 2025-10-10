@@ -1,0 +1,22 @@
+@font-face {
+  font-family: "iconfont"; /* Project id 5025504 */
+  src: url('iconfont.woff2?t=1758243782038') format('woff2'),
+       url('iconfont.woff?t=1758243782038') format('woff'),
+       url('iconfont.ttf?t=1758243782038') format('truetype');
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: inherit; /* 默认字体大小，可在组件中覆盖 */
+  font-style: normal;
+  padding-right: 0px !important;
+  margin-right: 0px !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+}
+
+.icon-huodaoguanli:before {
+  content: "\e689";
+}
+

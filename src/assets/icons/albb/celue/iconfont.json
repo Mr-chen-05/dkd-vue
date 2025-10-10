@@ -1,0 +1,16 @@
+{
+  "id": "5025504",
+  "name": "no name",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "17523065",
+      "name": "策略-任务策略",
+      "font_class": "celve-renwucelve",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    }
+  ]
+}

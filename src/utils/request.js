@@ -6,6 +6,7 @@ import { tansParams, blobValidate } from '@/utils/ruoyi'
 import cache from '@/plugins/cache'
 import { saveAs } from 'file-saver'
 import useUserStore from '@/store/modules/user'
+import { showErrorNotification, showDeleteErrorNotification } from '@/utils/errorHandler'
 
 let downloadLoadingInstance;
 // 是否显示重新登录
@@ -95,14 +96,66 @@ service.interceptors.response.use(res => {
     }
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
     } else if (code === 500) {
-      ElMessage({ message: msg, type: 'error' })
+      if (res.config.customErrorHandler) {
+        return Promise.reject({ code, msg, data: res.data })
+      }
+      // showErrorNotification({ message: msg, title: '操作失败' })
+      ElMessage.error(msg)
       return Promise.reject(new Error(msg))
     } else if (code === 601) {
-      ElMessage({ message: msg, type: 'warning' })
+      showErrorNotification({ message: msg, title: '提示信息' })
       return Promise.reject(new Error(msg))
-    } else if (code !== 200) {
-      ElNotification.error({ title: msg })
-      return Promise.reject('error')
+      } else if (code !== 200) {
+      if (res.config.customErrorHandler) {
+        return Promise.reject({ code, msg, data: res.data })
+      }
+      console.log('全局拦截器 - 错误信息:', msg);
+      console.log('全局拦截器 - 请求URL:', res.config.url);
+      console.log('全局拦截器 - 请求方法:', res.config.method);
+      console.log('全局拦截器 - 是否包含设备编号:', msg && msg.includes('设备编号'));
+      
+      // 对删除类请求的错误统一使用更友好的提示
+      // if (res.config.method === 'delete') {
+      //   if (res.config.customErrorHandler) {
+      //     return Promise.reject({ code, msg, data: res.data })
+      //   }
+      //   const showFormattedDeleteError = () => {
+      //     const formattedMsg = msg
+      //       .split('\n')
+      //       .map(line => line.trim())
+      //       .filter(Boolean)
+      //       .join('\n')
+
+      //     showDeleteErrorNotification(formattedMsg)
+      //   }
+
+      //   // 针对特定模块覆盖默认提示
+      //   if (res.config.url && res.config.url.includes('/manage/sku/')) {
+      //     showFormattedDeleteError()
+      //     return Promise.reject('error')
+      //   }
+
+      //   if (msg && /(设备编号|关联商品|货道|库存)/.test(msg)) {
+      //     showFormattedDeleteError()
+      //     return Promise.reject('error')
+      //   }
+      // }
+
+      const footerMessage = (() => {
+        if (/无法缩减设备类型行列数/.test(msg)) {
+          return '提示：当前设备类型仍有关联货道，请先至设备或货道管理解除关联后再尝试修改。'
+        }
+        if (/型号名称|已存在/.test(msg)) {
+          return '建议：请确认型号名称是否重复或与现有配置冲突，调整后重试。'
+        }
+        if (/关联商品|货道/.test(msg)) {
+          return '提示：请根据提示解除关联关系后再执行当前操作。'
+        }
+        return null
+      })()
+
+      showErrorNotification({ message: msg, footer: footerMessage || undefined })
+      return Promise.reject(new Error(msg))
     } else {
       return  Promise.resolve(res.data)
     }

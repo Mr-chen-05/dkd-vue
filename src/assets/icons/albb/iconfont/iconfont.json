@@ -1,0 +1,16 @@
+{
+  "id": "5025504",
+  "name": "no name",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "22237798",
+      "name": "货道管理",
+      "font_class": "huodaoguanli",
+      "unicode": "e689",
+      "unicode_decimal": 59017
+    }
+  ]
+}

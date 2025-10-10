@@ -7,6 +7,8 @@ import 'element-plus/dist/index.css'
 import locale from 'element-plus/es/locale/lang/zh-cn'
 
 import '@/assets/styles/index.scss' // global css
+import '@/assets/icons/albb/iconfont/iconfont.css'
+import '@/assets/icons/albb/celue/iconfont.css'
 
 import App from './App'
 import store from './store'
