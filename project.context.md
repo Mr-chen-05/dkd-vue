@@ -1,6 +1,6 @@
 # Project: 帝可得智能售货机管理系统 (dkd-vue)
-_Last updated: 2025-09-28_
-_Phase: 开发维护阶段 | Progress: 80% | Next Milestone: 功能优化和扩展_
+_Last updated: 2025-01-10_
+_Phase: 开发维护阶段 | Progress: 85% | Next Milestone: 功能优化和部署配置完善_
 
 ## 📌 Pinned
 <!-- 关键约束、接口要求、不可变规则 -->
@@ -14,9 +14,14 @@ _Phase: 开发维护阶段 | Progress: 80% | Next Milestone: 功能优化和扩�
 - 2025-09-28: 使用Vite作为构建工具，端口80，支持热重载 (related: #P002) #D002
 - 2025-09-28: 集成Pinia作为状态管理工具替代Vuex #D003
 - 2025-09-28: 采用Element Plus 2.4.3作为UI框架，支持中文本地化 #D004
+- 2025-01-10: 订单管理页面简化为只读模式，移除新增/修改/删除功能，专注数据查询和展示 #D005
+- 2025-01-10: 使用watch监听日期范围变化，实现自动查询提升用户体验 (related: #TODO005) #D006
+- 2025-01-10: Git历史清理策略采用orphan分支重建，彻底移除敏感信息 (related: #SECURITY001) #D007
 
 ## 📝 TODO
 <!-- 待办任务、计划功能、需要解决的问题 -->
+- [P0] [IN-PROGRESS] [#TODO005] 解决Zeabur前端部署配置问题（登录405错误）(assignee: AI)
+- [P1] [OPEN] [#TODO006] 测试订单页面日期筛选和字典数据展示功能
 - [P1] [OPEN] [#TODO001] 项目依赖版本更新检查 (due: 2025-10-05)
 - [P2] [OPEN] [#TODO002] 代码质量和ESLint配置完善
 - [P2] [OPEN] [#TODO003] TypeScript迁移评估和规划
@@ -32,18 +37,47 @@ _Phase: 开发维护阶段 | Progress: 80% | Next Milestone: 功能优化和扩�
 - 2025-09-28: [#UI-ANALYSIS] 定位货道图标与文字间距异常，确认由模板中的换行空白导致并给出内联写法/包裹元素的解决方案
 - 2025-09-29: [#UX-ERROR] 统一删除/接口错误通知样式，避免重复弹窗并提供引导说明 (evidence: src/utils/errorHandler.js, src/utils/request.js)
 - 2025-09-29: [#BUGFIX-VMTYPE] 为设备类型增删改接口启用自定义错误处理并补齐组件导入，消除重复提示 (evidence: src/api/manage/vmType.js, src/views/manage/vmType/index.vue)
+- 2025-01-10: [#SECURITY001] 清理Git历史中的阿里云AccessKey泄露，使用orphan分支重建历史 (evidence: commit:6309daa, GitHub/Gitee强制推送成功)
+- 2025-01-10: [#REFACTOR001] 重构订单管理页面，移除CRUD功能，保留查询和展示 (evidence: src/views/manage/order/index.vue)
+- 2025-01-10: [#FEATURE001] 订单页面添加日期范围筛选器，使用Element Plus DatePicker (evidence: src/views/manage/order/index.vue:12-20)
+- 2025-01-10: [#BUGFIX001] 修复日期选择器清空后仍保留旧查询条件的问题，优化watch监听逻辑 (evidence: src/views/manage/order/index.vue:82-95)
+- 2025-01-10: [#OPTIMIZATION001] 移除订单页面重复的订单状态列，保留字典标签展示 (evidence: src/views/manage/order/index.vue:60-66)
 
 ## 🔍 Issues [***]
 <!-- 问题解决记录，标记难度等级 -->
 - 2025-09-28: [**] 商品导出功能逻辑缺陷 (solved: 修改handleExport函数，增加选中商品判断和用户确认机制)
 - 2025-09-28: [**] 前端数组参数发送格式问题 (solved: 使用查询字符串方式发送多个同名参数)
 - 2025-09-28: [***] MyBatis SQL参数缺失错误 (identified: selectBatchSkuBySkuId包含多余参数检查，需要创建专用selectSkuListByIds方法)
+- 2025-01-10: [****] Git历史泄露阿里云AccessKey安全问题 (attempts:3, time:45min, solved:使用git orphan分支重建历史)
+  - **问题描述**: GitHub Push Protection检测到7个commit中包含阿里云AccessKey，阻止推送
+  - **尝试次数**: 3次（filter-branch尝试、BFG工具评估、orphan分支重建）
+  - **根本原因**: application.yml中硬编码了access-key: LTAI5t65BPE3hBJZihbP2BiZ
+  - **解决方法**: 
+    1. 使用git checkout --orphan创建全新分支
+    2. 提交所有当前文件（已改用环境变量）
+    3. 强制替换master分支
+    4. 强制推送到GitHub和Gitee
+  - **经验教训**: 敏感信息必须使用环境变量，绝不硬编码
+  - **预防措施**: 立即撤销泄露的密钥，重新生成新密钥
+- 2025-01-10: [**] 订单页面日期选择器清空不生效 (attempts:2, time:25min, solved:修正watch监听逻辑)
+  - **问题描述**: 清空日期范围或点击重置后，仍使用旧的日期条件查询
+  - **尝试次数**: 2次（注释handleQuery、修正赋值逻辑）
+  - **根本原因**: watch中直接赋值覆盖整个queryParams对象，丢失pageNum等属性
+  - **解决方法**: 
+    1. 只更新beginTime和endTime字段，不覆盖整个对象
+    2. 清空时设置为null而不是删除属性
+    3. 优化resetQuery顺序，先重置表单再清空日期
+  - **经验教训**: 响应式对象更新时要保持其他属性不丢失
+  - **预防措施**: 使用属性赋值而非对象覆盖
 
 ## 💡 Notes
 <!-- 备注信息、临时想法、待确认事项 -->
 - Needs-Confirmation: 是否需要添加TypeScript支持来提升代码质量
 - Reference: RuoYi官方文档 http://doc.ruoyi.vip/
 - Idea: 考虑集成PWA功能以提升移动端体验
+- 2025-01-10: Zeabur部署配置问题 - 前端环境变量需要配置VITE_APP_BASE_API=https://dkd-backend-api.zeabur.app
+- 2025-01-10: 后端数据库字典正常（order_status存在），前端需要等待字典加载完成后再渲染
+- 2025-01-10: 订单页面已简化为纯查询功能，符合实际业务场景（订单不支持前端修改）
 
 ---
 
