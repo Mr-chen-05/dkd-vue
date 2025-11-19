@@ -154,6 +154,7 @@ const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref([]);
+const classNames = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -215,6 +216,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map((item) => item.classId);
+  classNames.value = selection.map((item) => item.className);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
 }
@@ -261,8 +263,9 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _classIds = row.classId || ids.value;
+  const _skuNames = row.className || classNames.value;
   proxy.$modal
-    .confirm('是否确认删除商品管理编号为"' + _classIds + '"的数据项？')
+    .confirm('是否确认删除商品类型为"' + _skuNames + '"的数据项？')
     .then(function () {
       return delskuType(_classIds);
     })
@@ -271,7 +274,11 @@ function handleDelete(row) {
       proxy.$modal.msgSuccess("删除成功");
     })
     .catch((error) => {
-      showDeleteErrorNotification(error.msg || error.message || '删除失败')
+      // 只在实际删除失败时才显示错误提示
+      // 用户点取消时不会触发这里
+      if (error && error.msg || error.message) {
+        showDeleteErrorNotification(error.msg || error.message || '删除失败')
+      }
     });
 }
 

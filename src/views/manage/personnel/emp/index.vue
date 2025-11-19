@@ -260,6 +260,7 @@ const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref([]);
+const userNames = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -360,6 +361,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map((item) => item.id);
+  userNames.value = selection.map((item) => item.userName);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
 }
@@ -406,8 +408,9 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _ids = row.id || ids.value;
+  const _userNames = row.userName || userNames.value;
   proxy.$modal
-    .confirm('是否确认删除人员"' + row.userName + '"的数据项？')
+    .confirm('是否确认删除人员"' + _userNames + '"的数据项？')
     .then(function () {
       return delEmp(_ids);
     })

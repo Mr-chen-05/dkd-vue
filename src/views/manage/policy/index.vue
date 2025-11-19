@@ -129,6 +129,7 @@ const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref([]);
+const policyNames = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -277,6 +278,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.policyId);
+  policyNames.value = selection.map(item => item.policyName);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
 }
@@ -323,7 +325,8 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _policyIds = row.policyId || ids.value;
-  proxy.$modal.confirm('是否确认删除策略管理编号为"' + _policyIds + '"的数据项？').then(function() {
+  const _policyNames = row.policyName || policyNames.value;
+  proxy.$modal.confirm('是否确认删除策略名称为"' + _policyNames + '"的数据项？').then(function() {
     return delPolicy(_policyIds);
   }).then(() => {
     getList();

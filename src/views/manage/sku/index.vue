@@ -260,6 +260,7 @@ const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref([]);
+const skuNames = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -358,6 +359,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map((item) => item.skuId);
+  skuNames.value = selection.map((item) => item.skuName);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
 }
@@ -425,8 +427,9 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _skuIds = row.skuId || ids.value;
+  const _skuNames = row.skuName || skuNames.value;
   proxy.$modal
-    .confirm('是否确认删除商品管理编号为"' + _skuIds + '"的数据项？')
+    .confirm('是否确认删除商品管理名称为"' + _skuNames + '"的数据项？')
     .then(function () {
       return delsku(_skuIds);
     })
