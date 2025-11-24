@@ -2,7 +2,25 @@
   <div class="box abnormal-equipment">
     <div class="header">
       <div class="title">异常设备监控</div>
-      <el-icon @click="handleMore"><MoreFilled /></el-icon>
+      <el-dropdown @command="handleCommand" trigger="click">
+        <el-icon class="dropdown-icon"><MoreFilled /></el-icon>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="viewVm">
+              <el-icon><Notebook /></el-icon>
+              查看设备管理
+            </el-dropdown-item>
+            <el-dropdown-item command="viewStatus">
+              <el-icon><Monitor /></el-icon>
+              查看设备状态
+            </el-dropdown-item>
+            <el-dropdown-item command="createTask" divided>
+              <el-icon><CirclePlus /></el-icon>
+              一键创建工单
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
     <el-scrollbar v-if="listData.length" class="scrollbar body">
       <el-table
@@ -38,6 +56,19 @@
             <span>{{ scope.row.innerCode }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="100px" align="center">
+          <template #default="scope">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="handleCreateSingleTask(scope.row)"
+            >
+              <el-icon><Tools /></el-icon>
+              创建工单
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
     </el-scrollbar>
     <!-- TODO：一开始显示加载中 -->
@@ -48,123 +79,185 @@
   </div>
 </template>
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
+import { getAbnormalEquipmentList } from "@/api/home/homePage";
+import { addTask } from "@/api/manage/task";
+
 // 定义变量
 const router = useRouter();
-const listData = ref([
-        {
-            "createBy": null,
-            "createTime": "2020-12-18 15:49:03",
-            "updateBy": null,
-            "updateTime": "2024-05-14 09:21:58",
-            "remark": null,
-            "id": 80,
-            "innerCode": "A1000001",
-            "vmTypeId": 1,
-            "vmTypeName": "饮料机",
-            "channelMaxCapacity": 10,
-            "nodeId": 6,
-            "addr": "顺义奥林匹克水上公园",
-            "lastSupplyTime": "2023-03-22",
-            "businessId": 1,
-            "regionId": 3,
-            "regionName": "北京-顺义区",
-            "ownerId": 28,
-            "longitudes": 0,
-            "vmStatus": 1,
-            "clientId": "70122567fcc13e7615e7239812c20448",
-            "ownerName": "金燕龙合作商",
-            "latitude": 0,
-            "runningStatus": "{\"key\": \"10001\",\"value\":\"正常\" }",
-            "policyId": 1
-        },
-        {
-            "createBy": null,
-            "createTime": "2020-12-18 10:39:22",
-            "updateBy": null,
-            "updateTime": "2024-05-14 09:22:11",
-            "remark": null,
-            "id": 81,
-            "innerCode": "Ut548Hpf",
-            "vmTypeId": 1,
-            "vmTypeName": "饮料机",
-            "channelMaxCapacity": 10,
-            "nodeId": 2,
-            "addr": "北京市海淀区西直门北大街32号",
-            "lastSupplyTime": "2000-01-01",
-            "businessId": 2,
-            "regionId": 1,
-            "regionName": "北京-海淀区",
-            "ownerId": 1,
-            "longitudes": 0,
-            "vmStatus": 1,
-            "clientId": "3792e9c9b390e291514fd4f9b8fe95bb",
-            "ownerName": "金燕龙合作商",
-            "latitude": 0,
-            "runningStatus": "{\"key\": \"10001\",\"value\":\"正常\" }",
-            "policyId": 2
-        },
-        {
-            "createBy": null,
-            "createTime": "2020-12-18 11:45:28",
-            "updateBy": null,
-            "updateTime": "2024-05-16 12:25:30",
-            "remark": null,
-            "id": 82,
-            "innerCode": "RHaV9Zaz",
-            "vmTypeId": 1,
-            "vmTypeName": "饮料机",
-            "channelMaxCapacity": 10,
-            "nodeId": 3,
-            "addr": "北京市昌平区十三陵镇昌赤路 ",
-            "lastSupplyTime": "2000-01-01",
-            "businessId": 1,
-            "regionId": 2,
-            "regionName": "北京-昌平区",
-            "ownerId": 1,
-            "longitudes": 0,
-            "vmStatus": 1,
-            "clientId": "1b9e4df47a4c55124b54a4cb00b62123",
-            "ownerName": "金燕龙合作商",
-            "latitude": 0,
-            "runningStatus": "{\"key\": \"10001\",\"value\":\"正常\" }",
-            "policyId": 2
-        },
-        {
-            "createBy": null,
-            "createTime": "2020-12-18 11:46:19",
-            "updateBy": null,
-            "updateTime": "2024-05-14 09:24:44",
-            "remark": null,
-            "id": 83,
-            "innerCode": "f8uK9ixf",
-            "vmTypeId": 1,
-            "vmTypeName": "饮料机",
-            "channelMaxCapacity": 10,
-            "nodeId": 4,
-            "addr": "北京市昌平区南环路10号 ",
-            "lastSupplyTime": "2022-11-29",
-            "businessId": 2,
-            "regionId": 2,
-            "regionName": "北京-昌平区",
-            "ownerId": 1,
-            "longitudes": 0,
-            "vmStatus": 1,
-            "clientId": "d764e5e764db441de0ed5dbf68d48f90",
-            "ownerName": "金燕龙合作商",
-            "latitude": 0,
-            "runningStatus": "{\"key\": \"10001\",\"value\":\"正常\" }",
-            "policyId": 1
-        }
-    ]);
+const listData = ref([]);
+const loading = ref(true);
 
-// 点击更多
-const handleMore = () => {
-  router.push({ path: 'vm/machine' });
+onMounted(async () => {
+  try {
+    const data = await getAbnormalEquipmentList({ limit: 10 });
+    listData.value = Array.isArray(data) ? data : [];
+  } catch (e) {
+    ElMessage.error("异常设备数据加载失败");
+    listData.value = [];
+  } finally {
+    loading.value = false;
+  }
+});
+
+// 处理下拉菜单命令
+const handleCommand = (command) => {
+  switch (command) {
+    case "viewVm":
+      router.push("/manage/vm");
+      break;
+    case "viewStatus":
+      router.push("/manage/vmStatus");
+      break;
+    case "createTask":
+      handleCreateBatchTask();
+      break;
+  }
+};
+
+// 为单个设备创建工单
+const handleCreateSingleTask = async (vm) => {
+  ElMessageBox.confirm(
+    `确认为设备 ${vm.innerCode} 创建维修工单？<br/>故障时间：${
+      vm.updateTime
+    }<br/>设备地址：${vm.addr || "未知"}`,
+    "创建工单确认",
+    {
+      type: "warning",
+      confirmButtonText: "立即创建",
+      cancelButtonText: "取消",
+      dangerouslyUseHTMLString: true,
+    }
+  )
+    .then(async () => {
+      const loadingInstance = ElLoading.service({
+        lock: true,
+        text: "正在创建工单...",
+      });
+
+      try {
+        await addTask({
+          innerCode: vm.innerCode,
+          productTypeId: 1,
+          desc: `设备异常自动创建工单 - ${vm.addr || "未知地址"}`,
+          assignorId: null,
+        });
+
+        loadingInstance.close();
+
+        ElMessageBox.confirm(
+          "工单创建成功！是否立即查看工单列表？",
+          "创建成功",
+          {
+            type: "success",
+            confirmButtonText: "查看工单",
+            cancelButtonText: "关闭",
+          }
+        )
+          .then(() => {
+            router.push("/manage/task/operation");
+          })
+          .catch(() => {});
+      } catch (error) {
+        loadingInstance.close();
+        console.error("创建工单失败:", error);
+        // 错误已由全局拦截器处理
+      }
+    })
+    .catch(() => {});
+};
+
+// 一键批量创建工单
+const handleCreateBatchTask = async () => {
+  if (!listData.value.length) {
+    ElMessage.warning("暂无异常设备，无需创建工单");
+    return;
+  }
+
+  const count = listData.value.length;
+  const actionText =
+    count === 1
+      ? "为该设备创建维修工单"
+      : `为这 ${count} 台设备批量创建维修工单`;
+
+  ElMessageBox.confirm(
+    `检测到 ${count} 台异常设备，是否${actionText}？`,
+    "创建工单确认",
+    {
+      type: "warning",
+      confirmButtonText: "立即创建",
+      cancelButtonText: "取消",
+    }
+  )
+    .then(async () => {
+      const loadingInstance = ElLoading.service({
+        lock: true,
+        text: "正在创建工单...",
+        background: "rgba(0, 0, 0, 0.7)",
+      });
+
+      try {
+        let successCount = 0;
+        let failCount = 0;
+        let lastErrorMsg = "";
+
+        for (const vm of listData.value) {
+          try {
+            await addTask({
+              innerCode: vm.innerCode,
+              productTypeId: 1,
+              desc: `设备异常自动创建工单 - ${vm.addr || "未知地址"}`,
+              assignorId: null,
+            });
+            successCount++;
+          } catch (error) {
+            lastErrorMsg =
+              error?.response?.data?.msg ||
+              error?.response?.data?.message ||
+              error?.message ||
+              error?.msg ||
+              `设备${vm.innerCode}创建失败`;
+
+            console.error(`设备 ${vm.innerCode} 创建工单失败:`, error);
+            failCount++;
+          }
+        }
+
+        loadingInstance.close();
+
+        // 显示结果
+        if (successCount > 0) {
+          const resultMsg =
+            failCount > 0
+              ? `成功创建 ${successCount} 个工单，${failCount} 个失败（${lastErrorMsg}）。是否立即查看工单列表？`
+              : `成功创建 ${successCount} 个工单。是否立即查看工单列表？`;
+
+          ElMessageBox.confirm(resultMsg, "创建成功", {
+            type: "success",
+            confirmButtonText: "查看工单",
+            cancelButtonText: "稍后查看",
+          })
+            .then(() => {
+              router.push("/manage/task/operation");
+            })
+            .catch(() => {});
+        } else {
+          // 全部失败，错误已由全局拦截器处理，这里只记录日志
+          console.log("所有设备创建工单均失败");
+        }
+      } catch (error) {
+        loadingInstance.close();
+        console.error("批量创建工单失败:", error);
+        // 错误已由全局拦截器处理
+      }
+    })
+    .catch(() => {});
 };
 </script>
 <style lang="scss" scoped>
-@import '@/assets/styles/variables.module.scss';
+@import "@/assets/styles/variables.module.scss";
 
 .abnormal-equipment {
   display: flex;
@@ -173,6 +266,15 @@ const handleMore = () => {
   min-height: 353px;
   background: #ffffff;
   border-radius: 20px;
+
+  .dropdown-icon {
+    cursor: pointer;
+    font-size: 20px;
+
+    &:hover {
+      color: $--color-primary;
+    }
+  }
 
   .more {
     color: $--color-primary;
