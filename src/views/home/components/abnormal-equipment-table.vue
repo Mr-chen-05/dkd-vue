@@ -6,15 +6,7 @@
         <el-icon class="dropdown-icon"><MoreFilled /></el-icon>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="viewVm">
-              <el-icon><Notebook /></el-icon>
-              查看设备管理
-            </el-dropdown-item>
-            <el-dropdown-item command="viewStatus">
-              <el-icon><Monitor /></el-icon>
-              查看设备状态
-            </el-dropdown-item>
-            <el-dropdown-item command="createTask" divided>
+            <el-dropdown-item command="createTask">
               <el-icon><CirclePlus /></el-icon>
               一键创建工单
             </el-dropdown-item>
@@ -59,6 +51,7 @@
         <el-table-column label="操作" width="100px" align="center">
           <template #default="scope">
             <el-button
+              v-if="!scope.row.hasActiveTask"
               link
               type="primary"
               size="small"
@@ -67,6 +60,9 @@
               <el-icon><Tools /></el-icon>
               创建工单
             </el-button>
+            <span v-else style="color: #909399; font-size: 12px"
+              >工单进行中</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -79,11 +75,12 @@
   </div>
 </template>
 <script setup>
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
 import { getAbnormalEquipmentList } from "@/api/home/homePage";
-import { addTask } from "@/api/manage/task";
+import { addTask, getOperationList } from "@/api/manage/task";
+import request from "@/utils/request";
 
 // 定义变量
 const router = useRouter();
@@ -91,8 +88,16 @@ const listData = ref([]);
 const loading = ref(true);
 
 onMounted(async () => {
+  // 首次加载，调用统一的刷新方法
+  await reloadList();
+});
+
+// 刷新异常设备列表（支持限制条数）
+// 说明：封装统一刷新逻辑，便于在创建工单成功后复用
+const reloadList = async (limit = 10) => {
+  loading.value = true;
   try {
-    const data = await getAbnormalEquipmentList({ limit: 10 });
+    const data = await getAbnormalEquipmentList({ limit });
     listData.value = Array.isArray(data) ? data : [];
   } catch (e) {
     ElMessage.error("异常设备数据加载失败");
@@ -100,20 +105,84 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+};
 
 // 处理下拉菜单命令
 const handleCommand = (command) => {
-  switch (command) {
-    case "viewVm":
-      router.push("/manage/vm");
-      break;
-    case "viewStatus":
-      router.push("/manage/vmStatus");
-      break;
-    case "createTask":
-      handleCreateBatchTask();
-      break;
+  if (command === "createTask") {
+    handleCreateBatchTask();
+  }
+};
+
+/**
+ * 智能分配运维人员
+ * @param {string} innerCode - 设备编号
+ * @returns {Promise<{userId: number, userName: string} | null>}
+ */
+const assignOperationUser = async (innerCode) => {
+  try {
+    // 1. 获取该设备区域的运维人员列表
+    const response = await getOperationList(innerCode);
+    const userList = response.data || [];
+
+    if (!userList || userList.length === 0) {
+      console.error(`设备 ${innerCode} 没有可用的运维人员`);
+      return null;
+    }
+
+    // 2. 如果只有一个运维人员，直接返回
+    if (userList.length === 1) {
+      return {
+        userId: userList[0].id,
+        userName: userList[0].userName,
+      };
+    }
+
+    // 3. 查询每个运维人员的工作量
+    const userWorkloads = await Promise.all(
+      userList.map(async (user) => {
+        try {
+          const workloadRes = await request({
+            url: `/manage/emp/empWorkload/${user.id}`,
+            method: "get",
+          });
+          const workloadData =
+            workloadRes.data && workloadRes.data.length > 0
+              ? workloadRes.data[0]
+              : null;
+          return {
+            userId: user.id,
+            userName: user.userName,
+            // 本月进行中的工单数，如果没有数据则为0
+            progressCount: workloadData?.progressCountMonth || 0,
+          };
+        } catch (error) {
+          console.error(`查询运维人员 ${user.userName} 工作量失败:`, error);
+          return {
+            userId: user.id,
+            userName: user.userName,
+            progressCount: 0,
+          };
+        }
+      })
+    );
+
+    // 4. 选择工作量最少的运维人员
+    const selectedUser = userWorkloads.reduce((min, current) => {
+      return current.progressCount < min.progressCount ? current : min;
+    });
+
+    console.log(
+      `智能分配结果: ${selectedUser.userName}（当前工单数: ${selectedUser.progressCount}）`
+    );
+
+    return {
+      userId: selectedUser.userId,
+      userName: selectedUser.userName,
+    };
+  } catch (error) {
+    console.error("智能分配运维人员失败:", error);
+    return null;
   }
 };
 
@@ -134,30 +203,54 @@ const handleCreateSingleTask = async (vm) => {
     .then(async () => {
       const loadingInstance = ElLoading.service({
         lock: true,
-        text: "正在创建工单...",
+        text: "正在智能分配运维人员并创建工单...",
       });
 
       try {
+        // 智能分配运维人员
+        const assignedUser = await assignOperationUser(vm.innerCode);
+
+        if (!assignedUser) {
+          loadingInstance.close();
+          ElMessage.error(
+            `设备 ${vm.innerCode} 所在区域没有可用的运维人员，无法创建工单`
+          );
+          return;
+        }
+
+        // 创建工单
         await addTask({
+          createType: 1,
           innerCode: vm.innerCode,
-          productTypeId: 1,
-          desc: `设备异常自动创建工单 - ${vm.addr || "未知地址"}`,
+          productTypeId: vm.vmStatus === 0 ? 1 : 3, // 根据设备状态选择工单类型
+          userId: assignedUser.userId,
+          desc: `设备异常自动创建工单
+故障时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`,
           assignorId: null,
         });
 
         loadingInstance.close();
 
+        // 乐观更新：按钮立即切换为“工单进行中”，设备不移除
+        vm.hasActiveTask = true;
+
+        // 与后端对齐：重新拉取异常设备数据
+        await reloadList();
+
         ElMessageBox.confirm(
-          "工单创建成功！是否立即查看工单列表？",
+          `工单创建成功！已分配给运维人员：${assignedUser.userName}<br/>是否立即查看工单列表？`,
           "创建成功",
           {
             type: "success",
             confirmButtonText: "查看工单",
             cancelButtonText: "关闭",
+            dangerouslyUseHTMLString: true,
           }
         )
           .then(() => {
-            router.push("/manage/task/operation");
+            router.push("/task/operation");
           })
           .catch(() => {});
       } catch (error) {
@@ -171,46 +264,71 @@ const handleCreateSingleTask = async (vm) => {
 
 // 一键批量创建工单
 const handleCreateBatchTask = async () => {
-  if (!listData.value.length) {
-    ElMessage.warning("暂无异常设备，无需创建工单");
+  // 过滤掉已有工单的设备
+  const availableDevices = listData.value.filter((item) => !item.hasActiveTask);
+
+  if (availableDevices.length === 0) {
+    ElMessage.warning("当前所有异常设备均已有进行中的工单，无需创建");
     return;
   }
 
-  const count = listData.value.length;
-  const actionText =
-    count === 1
-      ? "为该设备创建维修工单"
-      : `为这 ${count} 台设备批量创建维修工单`;
+  const count = availableDevices.length;
+  const totalCount = listData.value.length;
+  const skipCount = totalCount - count;
+
+  let confirmMsg = `检测到 ${count} 台需要维修的设备，是否批量创建工单？`;
+  if (skipCount > 0) {
+    confirmMsg = `检测到 ${totalCount} 台异常设备，其中 ${skipCount} 台已有工单。<br/>是否为其余 ${count} 台设备创建工单？`;
+  }
 
   ElMessageBox.confirm(
-    `检测到 ${count} 台异常设备，是否${actionText}？`,
+    `${confirmMsg}<br/><span style="color: #909399; font-size: 12px;">系统将智能分配运维人员</span>`,
     "创建工单确认",
     {
       type: "warning",
       confirmButtonText: "立即创建",
       cancelButtonText: "取消",
+      dangerouslyUseHTMLString: true,
     }
   )
     .then(async () => {
       const loadingInstance = ElLoading.service({
         lock: true,
-        text: "正在创建工单...",
+        text: "正在智能分配运维人员并批量创建工单...",
         background: "rgba(0, 0, 0, 0.7)",
       });
 
       try {
         let successCount = 0;
         let failCount = 0;
+        let noUserCount = 0; // 没有运维人员的设备数
         let lastErrorMsg = "";
 
-        for (const vm of listData.value) {
+        for (const vm of availableDevices) {
           try {
+            // 智能分配运维人员
+            const assignedUser = await assignOperationUser(vm.innerCode);
+
+            if (!assignedUser) {
+              noUserCount++;
+              console.warn(`设备 ${vm.innerCode} 没有可用的运维人员，跳过`);
+              continue;
+            }
+
+            // 创建工单
             await addTask({
               innerCode: vm.innerCode,
-              productTypeId: 1,
-              desc: `设备异常自动创建工单 - ${vm.addr || "未知地址"}`,
+              productTypeId: vm.vmStatus === 0 ? 1 : 3, // 根据设备状态选择工单类型
+              createType: 1,
+              userId: assignedUser.userId,
+              desc: `设备异常自动创建工单
+故障时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`,
               assignorId: null,
             });
+            // 乐观更新：立即切换按钮为“工单进行中”，设备保留在列表
+            vm.hasActiveTask = true;
             successCount++;
           } catch (error) {
             lastErrorMsg =
@@ -227,12 +345,19 @@ const handleCreateBatchTask = async () => {
 
         loadingInstance.close();
 
+        // 与后端对齐：批量完成后统一刷新异常设备列表
+        await reloadList();
+
         // 显示结果
         if (successCount > 0) {
-          const resultMsg =
-            failCount > 0
-              ? `成功创建 ${successCount} 个工单，${failCount} 个失败（${lastErrorMsg}）。是否立即查看工单列表？`
-              : `成功创建 ${successCount} 个工单。是否立即查看工单列表？`;
+          let resultMsg = `成功创建 ${successCount} 个工单`;
+          if (noUserCount > 0) {
+            resultMsg += `，${noUserCount} 台设备无可用运维人员`;
+          }
+          if (failCount > 0) {
+            resultMsg += `，${failCount} 个失败（${lastErrorMsg}）`;
+          }
+          resultMsg += "。是否立即查看工单列表？";
 
           ElMessageBox.confirm(resultMsg, "创建成功", {
             type: "success",
@@ -240,12 +365,16 @@ const handleCreateBatchTask = async () => {
             cancelButtonText: "稍后查看",
           })
             .then(() => {
-              router.push("/manage/task/operation");
+              router.push("/task/operation");
             })
             .catch(() => {});
         } else {
-          // 全部失败，错误已由全局拦截器处理，这里只记录日志
-          console.log("所有设备创建工单均失败");
+          // 全部失败
+          let errorMsg = "工单创建失败";
+          if (noUserCount > 0) {
+            errorMsg = `所有设备（${noUserCount}台）都没有可用的运维人员`;
+          }
+          ElMessage.error(errorMsg);
         }
       } catch (error) {
         loadingInstance.close();
