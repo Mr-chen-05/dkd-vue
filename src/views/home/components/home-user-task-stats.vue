@@ -46,33 +46,28 @@
   </div>
 </template>
 <script setup>
+import { onMounted } from 'vue'
 import dayjs from 'dayjs';
+import { ElMessage } from 'element-plus'
+import { getUserTaskStats } from '@/api/home/homePage'
 // 定义变量
-const repair = ref(false);
-const orderCountNum = ref(0);
-const orderAmountNum = ref(0);
 const start = dayjs().startOf('month').format('YYYY.MM.DD');
 const end = dayjs().endOf('day').format('YYYY.MM.DD');
-const userTaskStats = ref([
-  {
-    total: 6,
-    completedTotal: 4,
-    cancelTotal: 1,
-    progressTotal: 1,
-    workerCount: 16,
-    repair: false,
-    date: null,
-  },
-  {
-    total: 6,
-    completedTotal: 4,
-    cancelTotal: 1,
-    progressTotal:1,
-    workerCount: 12,
-    repair: true,
-    date: null,
-  },
-]);
+const userTaskStats = ref([])
+const loading = ref(true)
+onMounted(async () => {
+  try {
+    const data = await getUserTaskStats({
+      start: dayjs().startOf('month').format('YYYY-MM-DD HH:mm:ss'),
+      end: dayjs().endOf('day').format('YYYY-MM-DD HH:mm:ss')
+    })
+    userTaskStats.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    ElMessage.error('工单统计数据加载失败')
+  } finally {
+    loading.value = false
+  }
+})
 // 定义方法
 const orderCount = () => {
   const month = {

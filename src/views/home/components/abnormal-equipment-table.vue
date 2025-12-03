@@ -2,6 +2,19 @@
   <div class="box abnormal-equipment">
     <div class="header">
       <div class="title">异常设备监控</div>
+      <!-- 刷新按钮 -->
+      <el-button
+        class="refresh-btn"
+        circle
+        :loading="loading"
+        :disabled="loading"
+        @click="reloadList()"
+        type="text"
+        style="color:#000"
+        title="刷新异常设备列表"
+      >
+        <el-icon><RefreshRight /></el-icon>
+      </el-button>
       <el-dropdown @command="handleCommand" trigger="click">
         <el-icon class="dropdown-icon"><MoreFilled /></el-icon>
         <template #dropdown>
@@ -60,9 +73,9 @@
               <el-icon><Tools /></el-icon>
               创建工单
             </el-button>
-            <span v-else style="color: #909399; font-size: 12px"
-              >工单进行中</span
-            >
+            <span v-else style="color: #909399; font-size: 12px">
+              {{ getTaskStatusText(scope.row.taskStatus) }}
+            </span>
           </template>
         </el-table-column>
       </el-table>
@@ -78,6 +91,12 @@
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
+import {
+  MoreFilled,
+  Tools,
+  CirclePlus,
+  RefreshRight,
+} from "@element-plus/icons-vue"; // 新增 RefreshRight
 import { getAbnormalEquipmentList } from "@/api/home/homePage";
 import { addTask, getOperationList } from "@/api/manage/task";
 import request from "@/utils/request";
@@ -112,6 +131,21 @@ const handleCommand = (command) => {
   if (command === "createTask") {
     handleCreateBatchTask();
   }
+};
+
+/**
+ * 获取工单状态文案
+ * @param {number} taskStatus - 工单状态 1-待办 2-进行 3-取消 4-完成
+ * @returns {string} 状态文案
+ */
+const getTaskStatusText = (taskStatus) => {
+  const statusMap = {
+    1: "工单已创建",
+    2: "工单进行中",
+    3: "工单已取消",
+    4: "工单已完成",
+  };
+  return statusMap[taskStatus] || "工单进行中";
 };
 
 /**
@@ -396,12 +430,21 @@ const handleCreateBatchTask = async () => {
   background: #ffffff;
   border-radius: 20px;
 
-  .dropdown-icon {
-    cursor: pointer;
-    font-size: 20px;
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-    &:hover {
-      color: $--color-primary;
+    .refresh-btn {
+      margin-right: 8px;
+    }
+
+    .dropdown-icon {
+      cursor: pointer;
+      font-size: 20px;
+      &:hover {
+        color: $--color-primary;
+      }
     }
   }
 
@@ -428,5 +471,10 @@ const handleCreateBatchTask = async () => {
     flex: 1;
     margin-top: 20px;
   }
+}
+// 刷新按钮添加悬浮态颜色为主题蓝色
+.refresh-btn:hover,
+.refresh-btn:focus {
+  color: $--color-primary !important;
 }
 </style>

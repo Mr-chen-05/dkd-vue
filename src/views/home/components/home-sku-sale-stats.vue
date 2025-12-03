@@ -32,13 +32,30 @@
   </div>
 </template>
 <script setup>
+import { onMounted } from 'vue'
 import dayjs from 'dayjs';
+import { ElMessage } from 'element-plus'
+import { getSalesStats } from '@/api/home/homePage'
 // 定义变量
-const repair = ref(false);
-const orderCountNum = ref(7358);
-const orderAmountNum = ref(7351);
+const orderCountNum = ref(0);
+const orderAmountNum = ref(0);
 const start = dayjs().startOf('month').format('YYYY.MM.DD');
 const end = dayjs().endOf('day').format('YYYY.MM.DD');
+const loading = ref(true)
+onMounted(async () => {
+  try {
+    const data = await getSalesStats({
+      start: dayjs().startOf('month').format('YYYY-MM-DD HH:mm:ss'),
+      end: dayjs().endOf('day').format('YYYY-MM-DD HH:mm:ss')
+    })
+    orderCountNum.value = Number(data?.orderCount || 0)
+    orderAmountNum.value = Number(data?.orderAmount || 0)
+  } catch (e) {
+    ElMessage.error('销售统计数据加载失败')
+  } finally {
+    loading.value = false
+  }
+})
 // 定义方法
 const orderCount = () => {
   const month = {

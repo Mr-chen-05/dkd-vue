@@ -1,9 +1,11 @@
 <template>
-  <div id="chartTop" ref="EcharRef" class="monitorContainer"></div>
+  <div v-if="(props.chartOption.seriesData || []).length" id="chartTop" ref="EcharRef" class="monitorContainer"></div>
+  <empty-data-chart :is-empty="!(props.chartOption.seriesData || []).length" />
 </template>
 <script setup>
 import * as echarts from 'echarts';
-import { onMounted } from 'vue';
+import { onMounted, watch, nextTick } from 'vue';
+import EmptyDataChart from '@/components/empty-data-chart/index.vue';
 const width = ref('100%');
 const height = ref('300px');
 const chart = ref('chart');
@@ -16,11 +18,18 @@ const props = defineProps({
   },
 });
 onMounted(() => {
-  setOption();
+  if ((props.chartOption.seriesData || []).length) {
+    nextTick(setOption);
+  }
 });
+let myChart = null;
 const setOption = () => {
   const chartDom = document.getElementById('chartTop');
-  const myChart = echarts.init(chartDom);
+  if (!chartDom) return;
+  if (myChart) {
+    try { myChart.dispose() } catch (e) {}
+  }
+  myChart = echarts.init(chartDom);
   let option = null;
   nextTick(() => {
     setTimeout(() => {
@@ -74,4 +83,9 @@ const setOption = () => {
     }, 10);
   });
 };
+watch(() => (props.chartOption.seriesData || []).length, (len) => {
+  if (len) {
+    nextTick(setOption)
+  }
+})
 </script>

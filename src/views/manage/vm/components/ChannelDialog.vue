@@ -142,14 +142,14 @@
         <el-icon
           v-if="pageCount > 1"
           class="arrow arrow-left"
-          :class="pageCount === 1 ? 'disabled' : ''"
+          :class="listQuery.pageNum === 1 ? 'disabled' : ''"
           @click="handleClickPrev"
           ><ArrowLeft
         /></el-icon>
         <el-icon
           v-if="pageCount > 1"
           class="arrow arrow-right"
-          :class="listQuery.pageIndex === pageCount ? 'disabled' : ''"
+          :class="listQuery.pageNum === pageCount ? 'disabled' : ''"
           @click="handleClickNext"
           ><ArrowRight
         /></el-icon>
@@ -259,8 +259,9 @@ const openRemoveSkuDialog = (index, code) => {
   channels.value[currentIndex.value].sku = undefined;
 };
 // 添加商品
+// 修复：与后端约定统一使用 pageNum/pageSize 进行分页
 const listQuery = ref({
-  pageIndex: 1,
+  pageNum: 1,
   pageSize: 10,
 }); //搜索商品
 const listSkuLoading = ref(false); //商品列表loading
@@ -274,7 +275,8 @@ const handleListOpen = async () => {
   listQuery.value.skuName = listQuery.value.skuName || undefined;
   const data = await listsku(listQuery.value);
   listSkuData.value = data;
-  pageCount.value = Math.ceil(data.total / 10);
+  // 修复：按当前 pageSize 计算总页数，避免硬编码
+  pageCount.value = Math.ceil(data.total / listQuery.value.pageSize);
   listSkuLoading.value = false;
 };
 // 打开商品选择弹层
@@ -289,23 +291,26 @@ const handleListClose = () => {
 };
 // 商品上一页
 const handleClickPrev = () => {
-  if (listQuery.value.pageIndex === 1) {
+  // 修复：按 pageNum 判断首页
+  if (listQuery.value.pageNum === 1) {
     return;
   }
-  listQuery.value.pageIndex--;
+  listQuery.value.pageNum--;
   handleListOpen();
 };
 // 商品下一页
 const handleClickNext = () => {
-  if (listQuery.value.pageIndex === pageCount.value) {
+  // 修复：按 pageNum 与 pageCount 判断末页
+  if (listQuery.value.pageNum === pageCount.value) {
     return;
   }
-  listQuery.value.pageIndex++;
+  listQuery.value.pageNum++;
   handleListOpen();
 };
 // 搜索
 const resetPageIndex = () => {
-  listQuery.value.pageIndex = 1;
+  // 修复：搜索重置到第一页使用 pageNum
+  listQuery.value.pageNum = 1;
   handleListOpen();
 };
 // 商品选择

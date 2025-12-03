@@ -1,5 +1,6 @@
 <template>
   <div class="app-container home">
+    <welcome-banner :username="userStore.name || '超级管理员'" />
     <el-row :gutter="20">
       <el-col :span="18">
         <el-row :gutter="20">
@@ -34,10 +35,14 @@ import SkuSaleRankChart from './components/sku-sale-rank-chart.vue';
 import SkuSaleCollectChart from './components/sku-sale-collect-chart.vue';
 import PartnerNodeCollectChart from './components/partner-node-collect-chart.vue';
 import AbnormalEquipmentTable from './components/abnormal-equipment-table.vue'
+import WelcomeBanner from './components/welcome-banner.vue'
+import useUserStore from '@/store/modules/user'
+const userStore = useUserStore()
 </script>
 
 <style scoped lang="scss">
 .home {
+  padding-bottom: 12px;
   blockquote {
     padding: 10px 20px;
     margin: 0 0 20px;
@@ -62,7 +67,8 @@ import AbnormalEquipmentTable from './components/abnormal-equipment-table.vue'
   font-family: 'open sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 13px;
   color: #676a6c;
-  overflow-x: hidden;
+  // 注释 overflow-x: hidden;后底部不会有多余的空行
+  // overflow-x: hidden;
 
   ul {
     list-style-type: none;

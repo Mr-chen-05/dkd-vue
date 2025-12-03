@@ -208,7 +208,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="角色">
+        <el-form-item label="角色" prop="regionId">
           <!-- <el-input v-model="form.roleCode" placeholder="请选择角色" /> -->
           <el-select v-model="form.roleId" placeholder="请选择角色">
             <el-option
@@ -283,7 +283,7 @@ const data = reactive({
     regionId: [
       { required: true, message: "负责区域不能为空", trigger: "blur" },
     ],
-    roleCode: [{ required: true, message: "角色不能为空", trigger: "blur" }],
+    roleId: [{ required: true, message: "角色不能为空", trigger: "blur" }],
     mobile: [{ required: true, message: "联系电话不能为空", trigger: "blur" }],
     image: [{ required: true, message: "员工头像不能为空", trigger: "blur" }],
     status: [

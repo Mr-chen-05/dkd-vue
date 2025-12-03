@@ -243,8 +243,8 @@
       width="500px"
       style="font-weight: bold"
     >
-      <el-form ref="vmRef" :model="form" label-width="120px">
-        <el-form-item label="选择策略" prop="policyName">
+      <el-form ref="policyRef" :model="form" :rules="policyRules" label-width="120px">
+        <el-form-item label="选择策略" prop="policyId">
           <el-select
             v-model="form.policyId"
             placeholder="请选择策略"
@@ -319,9 +319,12 @@ const data = reactive({
       { required: true, message: "设备型号不能为空", trigger: "blur" },
     ],
   },
+  policyRules: {
+    policyId: [{ required: true, message: "策略不能为空", trigger: "change" }],
+  },
 });
 
-const { queryParams, form, rules } = toRefs(data);
+const { queryParams, form, rules, policyRules } = toRefs(data);
 // 查询区域列表
 const regionList = ref([]);
 const getRegionList = () => {
@@ -372,6 +375,7 @@ function cancel() {
   // 延迟重置，避免没关闭表单之前就清空表单
   setTimeout(() => {
     reset();
+    proxy.resetForm("policyRef");
   }, 200);
 }
 
@@ -453,17 +457,18 @@ function handleUpdatePolicy(row) {
 
 /** 提交按钮 */
 function submitForm() {
-  proxy.$refs["vmRef"].validate((valid) => {
+  const refName = policyOpen.value ? "policyRef" : "vmRef";
+  proxy.$refs[refName].validate((valid) => {
     if (valid) {
       if (form.value.id != null) {
-        updateVm(form.value).then((response) => {
+        updateVm(form.value).then(() => {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
-          policyOpen.value = false; // 关闭策略对话框
+          policyOpen.value = false;
           getList();
         });
       } else {
-        addVm(form.value).then((response) => {
+        addVm(form.value).then(() => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();

@@ -18,6 +18,8 @@ const groupList = ref([
   { label: '月', value: 'month' },
   { label: '年', value: 'year' },
 ]);
+const checkedIndex = ref(0)
+const emit = defineEmits(['handleChange'])
 //触发日期
 const handleChange = (index)=>{
     if(checkedIndex.value===index){
@@ -26,6 +28,9 @@ const handleChange = (index)=>{
     checkedIndex.value = index
     emit('handleChange',groupList.value[index].value)
 }
+onMounted(()=>{
+  emit('handleChange', groupList.value[checkedIndex.value].value)
+})
 </script>
 <style lang="scss" scoped>
 @import '@/assets/styles/variables.module.scss';

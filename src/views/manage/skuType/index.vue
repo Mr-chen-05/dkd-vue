@@ -168,7 +168,11 @@ const data = reactive({
     className: null,
     parentId: null,
   },
-  rules: {},
+  rules: {
+    className: [
+      { required: true, message: "类别名称不能为空", trigger: "blur" },
+    ],
+  },
 });
 
 const { queryParams, form, rules } = toRefs(data);

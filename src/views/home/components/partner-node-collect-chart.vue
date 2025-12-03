@@ -8,48 +8,37 @@
       <el-col :span="17">
         <partner-node-collect-pie-chart :chart-option="pieChartOption" />
       </el-col>
-      <el-col :span="7">
+      <el-col :span="7" class="collect-col">
         <div class="collect">
-          <div class="count">
-            16
-          </div>
+          <div class="count">{{ totalNodes }}</div>
           <div class="name">点位数</div>
-          <div class="count count2">
-            5
-          </div>
+          <div class="count count2">{{ partnerCount }}</div>
           <div class="name">合作商数</div>
         </div>
-      </el-col>
+      </el-col> 
     </el-row>
   </div>
 </template>
 <script setup>
+import { onMounted } from 'vue'
 import PartnerNodeCollectPieChart from './partner-node-collect-pie-chart.vue'
+import { ElMessage } from 'element-plus'
+import { getPartnerNodeTop } from '@/api/home/homePage'
 // 定义变量
-const pieChartOption = ref({
-  seriesData: [
-    {
-      name: '金燕龙合作商',
-      value: 10,
-    },
-    {
-      name: '天华物业',
-      value: 2,
-    },
-    {
-      name: '北京合作商',
-      value: 2,
-    },
-    {
-      name: 'likede',
-      value: 1,
-    },
-    {
-      name: '佳佳',
-      value: 1,
-    },
-  ],
-});
+const pieChartOption = ref({ seriesData: [] });
+const totalNodes = ref(0)
+const partnerCount = ref(0)
+onMounted(async () => {
+  try {
+    const data = await ({ topN: 5 })
+    pieChartOption.value = { seriesData: data?.seriesData || [] }
+    totalNodes.value = Number(data?.totalNodes || 0)
+    partnerCount.value = Number(data?.partnerCount || 0)
+  } catch (e) {
+    ElMessage.error('合作商点位统计加载失败')
+    pieChartOption.value = { seriesData: [] }
+  }
+})
 </script>
 <style scoped>
 .partner-node-collect{
@@ -69,7 +58,15 @@ const pieChartOption = ref({
 .partner-node-collect .body{
     -webkit-box-flex: 1;
     -ms-flex: 1;
-    flex: 1
+    flex: 1;
+    height: 100%;
+    align-items: stretch !important
+}
+
+.partner-node-collect .body .collect-col{
+    display: grid;
+    place-items: center;
+    height: 100%
 }
 
 .partner-node-collect .body .chart{
@@ -79,8 +76,9 @@ const pieChartOption = ref({
 .partner-node-collect .body .collect{
     width: 154px;
     height: 230px;
-    padding-top: 47px;
-    padding-left: 38px;
+    padding-top: 32px;
+    padding-left: 24px;
+    margin: 0 auto;
     background: linear-gradient(135deg,transparent,#f8f8f9 0) 0 0,linear-gradient(-135deg,transparent 12px,#f8f8f9 0) 100% 0,linear-gradient(-45deg,transparent,#f8f8f9 0) 100% 100%,linear-gradient(45deg,transparent 12px,#f8f8f9 0) 0 100%;
     background-size: 50% 50%;
     background-repeat: no-repeat

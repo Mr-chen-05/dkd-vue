@@ -34,7 +34,7 @@
 
     <!-- 数据表格 -->
     <el-table v-loading="loading" :data="workList">
-      <el-table-column label="序号" align="center" prop="id" width="80"  />
+      <el-table-column label="序号" align="center" type="index" width="80"  />
       <el-table-column label="人员名称" align="center" prop="userName" />
       <el-table-column label="角色" align="center" prop="roleName" />
         

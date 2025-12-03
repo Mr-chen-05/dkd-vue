@@ -82,9 +82,26 @@
     />
 
     <!-- 设备详情对话框 -->
-    <el-dialog :title="title" v-model="open" width="500px" append-to-body>
-      
-    </el-dialog>
+    <el-dialog :title="title" v-model="open" width="720px" append-to-body>
+  <div v-loading="detailLoading">
+    <el-descriptions :column="2" border>
+      <el-descriptions-item label="设备编号" align="center">{{ form.innerCode }}</el-descriptions-item>
+      <el-descriptions-item label="设备型号" align="center">{{ form.vmTypeName }}</el-descriptions-item>
+      <el-descriptions-item label="点位名称" align="center">{{ form.nodeName }}</el-descriptions-item>
+      <el-descriptions-item label="所属区域" align="center">{{ form.regionName }}</el-descriptions-item>
+      <el-descriptions-item label="合作商" align="center">{{ form.partnerName }}</el-descriptions-item>
+      <el-descriptions-item label="容量" align="center">{{ form.channelMaxCapacity }}</el-descriptions-item>
+      <el-descriptions-item label="上次补货时间" align="center">{{ form.lastSupplyTime || '暂无补货记录' }}</el-descriptions-item>
+      <el-descriptions-item label="设备状态" align="center">
+        {{ form.vmStatus === 1 ? '正常' : '异常' }}
+      </el-descriptions-item>
+           <el-descriptions-item label="运行状态" align="center" :span="2">
+        {{ statusText(form) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="详细地址" align="center" :span="2">{{ form.addr }}</el-descriptions-item>
+     </el-descriptions>
+  </div>
+</el-dialog>
   </div>
 </template>
 
@@ -109,6 +126,7 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
+const detailLoading = ref(false)
 
 const data = reactive({
   form: {},
@@ -184,7 +202,7 @@ function cancel() {
 
 // 表单重置
 function reset() {
-  form.value = {
+   form.value = {
     id: null,
     innerCode: null,
     channelMaxCapacity: null,
@@ -203,6 +221,13 @@ function reset() {
     policyId: null,
     createTime: null,
     updateTime: null,
+    hasActiveTask: null,
+    taskStatus: null,
+    nodeName: null,
+    regionName: null,
+    partnerName: null,
+    vmTypeName: null,
+    runningStatusObj: null,
   };
   proxy.resetForm("vmRef");
 }
@@ -234,15 +259,21 @@ function handleAdd() {
   title.value = "添加设备管理";
 }
 
-/** 修改按钮操作 */
+/** 设备详情按钮操作 */
 function getVmInfo(row) {
-  reset();
-  const _id = row.id || ids.value;
-  getVm(_id).then((response) => {
-    form.value = response.data;
-    open.value = true;
-    title.value = "设备详情";
-  });
+  reset()
+  const _id = row.id || ids.value
+  detailLoading.value = true
+  getVm(_id)
+    .then((response) => {
+      form.value = response.data || {}
+      if (!form.value.runningStatusObj && form.value.runningStatus) {
+        try { form.value.runningStatusObj = JSON.parse(form.value.runningStatus) } catch {}
+      }
+      open.value = true
+      title.value = "设备详情"
+    })
+    .finally(() => { detailLoading.value = false })
 }
 
 /** 提交按钮 */
@@ -291,6 +322,12 @@ function handleExport() {
     },
     `vm_${new Date().getTime()}.xlsx`
   );
+}
+const statusText = (data) => {
+  const obj = data?.runningStatusObj
+  if (!obj) return '未知'
+  if (obj.status === true) return `运行正常(${obj.statusCode || 'OK'})`
+  return `运行异常(${obj.statusCode || 'ERR'})`
 }
 
 getList();

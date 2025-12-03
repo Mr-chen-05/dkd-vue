@@ -1,16 +1,12 @@
 <template>
   <div class="chart">
-    <div
-      id="chart"
-      class="monitorContainer"
-      :class="chartOption.xAxisData.length > 0 ? 'show' : 'hidden'"
-    />
-    <empty-data-chart :is-empty="chartOption.xAxisData.length === 0" />
+    <div id="chart" class="monitorContainer" />
   </div>
-</template>
+  </template>
 <script setup>
 import * as echarts from 'echarts';
-import { onMounted } from 'vue';
+import { onMounted, watch, nextTick } from 'vue';
+import dayjs from 'dayjs'
 import EmptyDataChart from '@/components/empty-data-chart/index.vue';
 const props = defineProps({
   chartOption: {
@@ -31,11 +27,16 @@ const areaStyleColor = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
   { offset: 1, color: 'rgba(255, 169, 169, 0)' },
 ]);
 onMounted(() => {
-  setOption();
+  nextTick(setOption);
 });
+let myChart = null;
 const setOption = () => {
   const chartDom = document.getElementById('chart');
-  const myChart = echarts.init(chartDom);
+  if (!chartDom) return;
+  if (myChart) {
+    try { myChart.dispose() } catch (e) {}
+  }
+  myChart = echarts.init(chartDom);
   let option = null;
   const grid = {
     left: '30',
@@ -46,6 +47,30 @@ const setOption = () => {
   };
   nextTick(() => {
     setTimeout(() => {
+      const format = 'YYYY-MM-DD'
+      const xAxis = (props.chartOption.xAxisData || []).length ? props.chartOption.xAxisData : Array.from({ length: 7 }).map((_, i) => dayjs().subtract(6 - i, 'day').format(format))
+      const seriesByClass = (props.chartOption.seriesDataByClass || [])
+      const baseSeries = [{ name: '暂无数据', data: xAxis.map(() => 0) }]
+      // 动态计算 y 轴范围：根据数据最大值自适应，避免年视图下折线被压顶
+      const collectAllValues = () => {
+        if (seriesByClass.length) {
+          return seriesByClass.flatMap(s => (s.data || []))
+        }
+        return (props.chartOption.seriesData || baseSeries[0].data)
+      }
+      const values = collectAllValues()
+      const maxVal = Math.max(0, ...values)
+      const dynMax = (() => {
+        if (maxVal <= 15) return 15
+        // 上浮 20%，并取整到 5 的倍数
+        const up = Math.ceil(maxVal * 1.2)
+        return up + (5 - (up % 5)) % 5
+      })()
+      const dynInterval = (() => {
+        const seg = Math.max(1, Math.round(dynMax / 5))
+        // 取整到 1 的倍数（显示更细腻）
+        return seg
+      })()
       option = {
         title: {
           text: '销售额趋势图',
@@ -60,7 +85,7 @@ const setOption = () => {
         grid: grid,
         xAxis: {
           type: 'category',
-          data: props.chartOption.xAxisData,
+          data: xAxis,
           axisLine: {
             lineStyle: {
               color: axisStyleColor1.value,
@@ -84,6 +109,9 @@ const setOption = () => {
           nameTextStyle: {
             color: axisStyleColor2.value,
           },
+          min: 0,
+          max: dynMax,
+          interval: dynInterval,
           axisLine: {
             show: false,
           },
@@ -99,7 +127,8 @@ const setOption = () => {
             },
           },
         },
-        series: getSeriesOption(),
+        legend: { top: 30 },
+        series: (seriesByClass.length ? seriesByClass.map(s => ({ type: 'line', name: s.name, data: s.data, smooth: true, symbol: 'circle', symbolSize: 4, lineStyle: { width: 2 } })) : [{ type: 'line', data: (props.chartOption.seriesData || []).length ? props.chartOption.seriesData : baseSeries[0].data, smooth: true, lineStyle: { color: lineStyleColor.value, width: 3, shadowColor: 'rgba(222, 115, 127, 0.23)', shadowBlur: 10, shadowOffsetY: 8 }, areaStyle: { color: areaStyleColor.value } }]),
         // TODO：细节调整
         tooltip: {
           trigger: 'axis',
@@ -123,23 +152,20 @@ const setOption = () => {
     }, 10);
   });
 };
-const getSeriesOption = () => {
-  return [
-    {
-      type: 'line',
-      data: props.chartOption.seriesData,
-      smooth: true,
-      lineStyle: {
-        color: lineStyleColor.value,
-        width: 3,
-        shadowColor: 'rgba(222, 115, 127, 0.23)',
-        shadowBlur: 10,
-        shadowOffsetY: 8,
-      },
-      areaStyle: {
-        color: areaStyleColor.value,
-      },
-    },
-  ];
-};
+watch(() => [props.chartOption.xAxisData, props.chartOption.seriesData, props.chartOption.seriesDataByClass], () => { nextTick(setOption) })
 </script>
+<style lang="scss" scoped>
+.chart {
+  position: relative;
+  display: inline-block;
+  width: 50%;
+  height: 100%;
+}
+.monitorContainer {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+.show { visibility: visible; }
+.hidden { visibility: hidden; }
+</style>

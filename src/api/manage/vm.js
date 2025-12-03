@@ -9,10 +9,19 @@ export function listVm(query) {
   })
 }
 
-// 查询设备管理详细
-export function getVm(id) {
+// // 查询设备管理详细
+// export function getVm(id) {
+//   return request({
+//     url: '/manage/vm/' + id,
+//     method: 'get'
+//   })
+// }
+/**
+ * 查询设备详情
+ */
+export const getVm = (id) => {
   return request({
-    url: '/manage/vm/' + id,
+    url: `/manage/vm/${id}`,
     method: 'get'
   })
 }
