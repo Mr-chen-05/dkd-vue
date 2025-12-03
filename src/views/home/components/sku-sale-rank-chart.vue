@@ -50,7 +50,7 @@ const calcHeights = () => {
   const el = rankContainerRef.value
   if (!el || !n) { computedHeights.value = []; gapPx.value = 0; return }
   const h = el.clientHeight
-  const gap = 20
+  const gap = 10
   const totalGap = gap * (n - 1)
   const avail = Math.max(0, h - totalGap)
   const weights = (() => {

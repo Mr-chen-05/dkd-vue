@@ -30,7 +30,7 @@ const totalNodes = ref(0)
 const partnerCount = ref(0)
 onMounted(async () => {
   try {
-    const data = await ({ topN: 5 })
+    const data = await getPartnerNodeTop({ topN: 5 })
     pieChartOption.value = { seriesData: data?.seriesData || [] }
     totalNodes.value = Number(data?.totalNodes || 0)
     partnerCount.value = Number(data?.partnerCount || 0)
