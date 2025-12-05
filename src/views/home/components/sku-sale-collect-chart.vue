@@ -31,6 +31,8 @@ import SkuSaleCollectLineChart from './sku-sale-collect-line-chart.vue';
 import SkuSaleCollectBarChart from './sku-sale-collect-bar-chart.vue';
 import { ElMessage } from 'element-plus'
 import { getSalesTrend, getSalesRegionDistribution, getSalesTrendByClass } from '@/api/home/homePage'
+import { listskuType } from '@/api/manage/skuType'
+import { loadAllParam } from '@/api/page'
 // 定义变量
 const datePickerSel = ref([]);
 const datePickerFormat = ref([]);
@@ -39,6 +41,7 @@ const userTaskStatus = ref([]);
 const lineChartOption = ref({ xAxisData: [], seriesData: [], yAxisName: '单位：元' });
 const collectType = ref(1); // 统计时间类型，1:按日统计，2:按月统计
 const barChartOption = ref({ xAxisData: [], seriesData: [], yAxisName: '单位：元' });
+const classNameMap = ref({});
 onMounted(()=>{
     handleRadioGroupSelChange(radioGroupSel.value)
     fetchCharts()
@@ -62,8 +65,21 @@ const fetchCharts = async () => {
   // 修正结束时间与选择一致（年→年末、月→月末、周→周末），确保月/年视图数据差异明显
   const end = dayjs().endOf(radioGroupSel.value).format('YYYY-MM-DD HH:mm:ss')
   try {
+    // 获取分类名称映射
+    try {
+      const res = await listskuType(loadAllParam)
+      const map = {}
+      ;(res?.rows || []).forEach(item => { map[item.classId] = item.className })
+      classNameMap.value = map
+    } catch (e) {
+      classNameMap.value = classNameMap.value || {}
+    }
     const trend = await getSalesTrendByClass({ start, end, granularity })
-    lineChartOption.value = trend || { xAxisData: [], seriesDataByClass: [], yAxisName: '单位：元' }
+    const mappedSeries = (trend?.seriesDataByClass || []).map(s => ({
+      ...s,
+      name: classNameMap.value?.[Number(s?.name)] ?? String(s?.name)
+    }))
+    lineChartOption.value = { xAxisData: trend?.xAxisData || [], seriesDataByClass: mappedSeries, yAxisName: '单位：元' }
   } catch (e) {
     ElMessage.error('销售趋势数据加载失败')
     lineChartOption.value = { xAxisData: [], seriesDataByClass: [], yAxisName: '单位：元' }
