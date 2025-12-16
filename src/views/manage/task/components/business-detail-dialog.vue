@@ -116,9 +116,9 @@
 </template>
 
 <script setup name="Task">
-import { watch } from 'vue';
+import { watch, ref, getCurrentInstance } from 'vue';
+import { ElMessageBox, ElMessage } from 'element-plus';
 import { require } from '@/utils/validate';
-import { ElMessageBox } from 'element-plus';
 import { cancelTaskType } from '@/api/manage/taskType';
 // 组件
 import BusinessReplenishmentListDialog from './business-replenishment-list-dialog.vue';
@@ -141,11 +141,12 @@ const props = defineProps({
   },
   // 工单id
   taskId: {
-    type: Number,
+    type: [Number, String],
     default: '',
   },
 });
 // 定义变量
+const { proxy } = getCurrentInstance();
 const emit = defineEmits(['handleClose', 'handleAdd', 'getList']);
 const visible = ref(false);
 const listVisible = ref(false); //货道弹层
@@ -158,25 +159,33 @@ watch(
   }
 );
 // 取消工单
-const handleCancelTask = () => {
-  ElMessageBox.confirm('取消工单后，将不能恢复，是否确认取消？', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      const obj = {
-        taskId: props.taskId,
-        desc: '后台工作人员取消',
-      };
-      cancelTaskType(obj).then((res) => {
-        if (res.code === 200) {
-          emit('getList');
-          cancel();
-        }
-      });
-    })
-    .catch(() => {});
+const handleCancelTask = async () => {
+  try {
+    await ElMessageBox.confirm('取消工单后，将不能恢复，是否确认取消？', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+    const obj = {
+      taskId: props.taskId,
+      desc: '后台工作人员取消',
+    };
+    await cancelTaskType(obj);
+    // 先关闭弹窗，再进行其他操作
+    cancel();
+    // 刷新列表
+    emit('getList');
+    // 显示成功提示
+    proxy.$modal.msgSuccess('工单取消成功');
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('取消工单失败:', error);
+      // 如果不是 API 请求错误（已经被拦截器处理），则在这里提示
+      if (error instanceof Error && !error.message?.includes('系统接口')) {
+         ElMessage.error(error.message || '操作失败');
+      }
+    }
+  }
 };
 // 关闭 弹层
 const cancel = () => {

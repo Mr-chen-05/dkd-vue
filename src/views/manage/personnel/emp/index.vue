@@ -208,9 +208,9 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="角色" prop="regionId">
+        <el-form-item label="角色" prop="roleId">
           <!-- <el-input v-model="form.roleCode" placeholder="请选择角色" /> -->
-          <el-select v-model="form.roleId" placeholder="请选择角色">
+          <el-select v-model="form.roleId" placeholder="请选择角色" @change="handleRoleChange">
             <el-option
               v-for="r in roleList"
               :key="r.roleId"
@@ -294,6 +294,20 @@ const data = reactive({
 
 const { queryParams, form, rules } = toRefs(data);
 
+function handleRoleChange(roleId) {
+  console.log("传进来的 roleId 是:", roleId);
+  console.log("当前的 roleList 是:", JSON.parse(JSON.stringify(roleList.value)));
+  const role = roleList.value.find((item) => item.roleId == roleId);
+  console.log("role:", role.roleCode);
+  if (role) {
+    form.value.roleCode = role.roleCode;
+    form.value.roleName = role.roleName;
+    console.log("找到了 role:", role);
+  } else {
+    console.log("没找到 role!");
+  }
+}
+
 // 查询区域列表
 const regionList = ref([]);
 const getRegionList = () => {
@@ -307,6 +321,7 @@ const roleList = ref([]);
 const getRoleList = () => {
   listRole(loadAllParam).then((response) => {
     roleList.value = response.rows;
+
   });
 };
 getRoleList();
@@ -377,8 +392,9 @@ function handleAdd() {
 function handleUpdate(row) {
   reset();
   const _id = row.id || ids.value;
+  
   getEmp(_id).then((response) => {
-    form.value = response.data;
+    Object.assign(form.value, response.data);
     open.value = true;
     title.value = "修改人员列表";
   });

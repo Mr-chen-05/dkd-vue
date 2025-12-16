@@ -106,9 +106,9 @@
 </template>
 
 <script setup name="Task">
-import { watch } from 'vue';
+import { watch, ref, getCurrentInstance } from 'vue';
 import { require } from '@/utils/validate';
-import { ElMessageBox } from 'element-plus';
+import { ElMessageBox, ElMessage } from 'element-plus';
 import { cancelTaskType } from '@/api/manage/taskType';
 // 从父组件获取数据
 const props = defineProps({
@@ -124,11 +124,12 @@ const props = defineProps({
   },
   // 工单id
   taskId: {
-    type: String,
+    type: [String, Number],
     default: '',
   },
 });
 // 定义变量
+const { proxy } = getCurrentInstance();
 const emit = defineEmits(['handleClose','handleAdd','getList']);
 const visible = ref(false);
 watch(
@@ -150,25 +151,29 @@ const open = () => {
   // getTaskTypeList()
 };
 // 取消工单
-const handleCancelTask = () => {
-  ElMessageBox.confirm('取消工单后，将不能恢复，是否确认取消？', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      const obj = {
-        taskId: props.taskId,
-        desc: '后台工作人员取消',
-      };
-      cancelTaskType(obj).then((res) => {
-        if (res.code === 200) {
-          emit('getList')
-          cancel();
-        }
-      });
-    })
-    .catch(() => {});
+const handleCancelTask = async () => {
+  try {
+    await ElMessageBox.confirm('取消工单后，将不能恢复，是否确认取消？', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+    const obj = {
+      taskId: props.taskId,
+      desc: '后台工作人员取消',
+    };
+    await cancelTaskType(obj);
+    emit('getList');
+    cancel();
+    proxy.$modal.msgSuccess('工单取消成功');
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('取消工单失败:', error);
+      if (error instanceof Error && !error.message?.includes('系统接口')) {
+         ElMessage.error(error.message || '操作失败');
+      }
+    }
+  }
 };
 // 关闭 弹层
 const cancel = () => {

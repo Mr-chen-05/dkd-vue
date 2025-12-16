@@ -90,7 +90,7 @@
       <el-descriptions-item label="点位名称" align="center">{{ form.nodeName }}</el-descriptions-item>
       <el-descriptions-item label="所属区域" align="center">{{ form.regionName }}</el-descriptions-item>
       <el-descriptions-item label="合作商" align="center">{{ form.partnerName }}</el-descriptions-item>
-      <el-descriptions-item label="容量" align="center">{{ form.channelMaxCapacity }}</el-descriptions-item>
+      <el-descriptions-item label="总货道数" align="center">{{ form.channelMaxCapacity }}</el-descriptions-item>
       <el-descriptions-item label="上次补货时间" align="center">{{ form.lastSupplyTime || '暂无补货记录' }}</el-descriptions-item>
       <el-descriptions-item label="设备状态" align="center">
         {{ form.vmStatus === 1 ? '正常' : '异常' }}

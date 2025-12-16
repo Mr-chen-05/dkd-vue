@@ -252,16 +252,35 @@ const handleCreateSingleTask = async (vm) => {
           return;
         }
 
+        // 根据设备状态判断工单类型
+        const isDeployment = vm.vmStatus === 0;
+        const isRepair = vm.vmStatus === 1 || vm.vmStatus === 2;
+
+        if (!isDeployment && !isRepair) {
+          loadingInstance.close();
+          ElMessage.warning(
+            `设备 ${vm.innerCode} 的状态为“已撤机”，无法创建工单。`
+          );
+          return;
+        }
+
+        const productTypeId = isDeployment ? 1 : 3;
+        const desc = isDeployment
+          ? `设备投放工单
+投放时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`
+          : `设备异常自动创建工单
+故障时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`;
         // 创建工单
         await addTask({
           createType: 1,
           innerCode: vm.innerCode,
-          productTypeId: vm.vmStatus === 0 ? 1 : 3, // 根据设备状态选择工单类型
+          productTypeId,
           userId: assignedUser.userId,
-          desc: `设备异常自动创建工单
-故障时间：${vm.updateTime}
-设备地址：${vm.addr || "未知地址"}
-分配运维人员：${assignedUser.userName}`,
+          desc,
           assignorId: null,
         });
 
@@ -336,10 +355,21 @@ const handleCreateBatchTask = async () => {
         let successCount = 0;
         let failCount = 0;
         let noUserCount = 0; // 没有运维人员的设备数
+        let decommissionedCount = 0; // 已撤机设备数
         let lastErrorMsg = "";
 
         for (const vm of availableDevices) {
           try {
+            // 根据设备状态判断工单类型
+            const isDeployment = vm.vmStatus === 0;
+            const isRepair = vm.vmStatus === 1 || vm.vmStatus === 2;
+
+            if (!isDeployment && !isRepair) {
+              decommissionedCount++;
+              console.warn(`设备 ${vm.innerCode} 状态为“已撤机”，跳过创建工单。`);
+              continue;
+            }
+
             // 智能分配运维人员
             const assignedUser = await assignOperationUser(vm.innerCode);
 
@@ -349,16 +379,23 @@ const handleCreateBatchTask = async () => {
               continue;
             }
 
+            const productTypeId = isDeployment ? 1 : 3;
+            const desc = isDeployment
+              ? `设备投放工单
+投放时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`
+              : `设备异常自动创建工单
+故障时间：${vm.updateTime}
+设备地址：${vm.addr || "未知地址"}
+分配运维人员：${assignedUser.userName}`;
             // 创建工单
             await addTask({
               innerCode: vm.innerCode,
-              productTypeId: vm.vmStatus === 0 ? 1 : 3, // 根据设备状态选择工单类型
+              productTypeId,
               createType: 1,
               userId: assignedUser.userId,
-              desc: `设备异常自动创建工单
-故障时间：${vm.updateTime}
-设备地址：${vm.addr || "未知地址"}
-分配运维人员：${assignedUser.userName}`,
+              desc,
               assignorId: null,
             });
             // 乐观更新：立即切换按钮为“工单进行中”，设备保留在列表
@@ -385,6 +422,9 @@ const handleCreateBatchTask = async () => {
         // 显示结果
         if (successCount > 0) {
           let resultMsg = `成功创建 ${successCount} 个工单`;
+          if (decommissionedCount > 0) {
+            resultMsg += `，跳过 ${decommissionedCount} 台已撤机设备`;
+          }
           if (noUserCount > 0) {
             resultMsg += `，${noUserCount} 台设备无可用运维人员`;
           }
