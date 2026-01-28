@@ -39,12 +39,12 @@
         prop="addr"
         show-overflow-tooltip="true"
       />
-      <el-table-column label="运营状态" align="center" prop="vmStatus">
+      <el-table-column label="设备状态" align="center" prop="vmStatus">
         <template #default="scope">
           <dict-tag :options="vm_status" :value="scope.row.vmStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="设备状态" align="center" prop="vmStatus">
+      <el-table-column label="运营状态" align="center" prop="vmStatus">
         <template #default="scope">
           {{
             scope.row.runningStatus != null

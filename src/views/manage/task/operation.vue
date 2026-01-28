@@ -327,16 +327,18 @@ function handleSelectionChange(selection) {
 }
 
 /** 新增按钮操作 */
-function handleAdd(val) {
-  if (val === 'anew') {
-    taskInfo();
-    getUserList();
-  } else {
-    taskId.val = '';
-  }
+async function handleAdd(val) {
   reset();
   open.value = true;
   title.value = '添加运维工单';
+
+  if (val === 'anew') {
+    await taskInfo({ clearDesc: true });
+    getUserList();
+    return;
+  }
+
+  taskId.value = '';
 }
 
 /** 提交按钮 */
@@ -407,10 +409,12 @@ const getUserList = () => {
   });
 };
 // 获取工单详情
-const taskInfo = () => {
-  getTask(taskId.value).then((response) => {
-    form.value = response.data;
-  });
+const taskInfo = async (options = {}) => {
+  const response = await getTask(taskId.value);
+  form.value = response.data;
+  if (options.clearDesc) {
+    form.value.desc = null;
+  }
 };
 // 查看详情
 const openTaskDetailDialog = (row) => {

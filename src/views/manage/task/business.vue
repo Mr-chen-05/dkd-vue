@@ -339,16 +339,18 @@ function handleSelectionChange(selection) {
 }
 
 /** 新增按钮操作 */
-function handleAdd(val) {
-  if (val === 'anew') {
-    taskInfo();
-    getUserList();
-  } else {
-    taskId.val = '';
-  }
+async function handleAdd(val) {
   reset();
   open.value = true;
   title.value = '添加运营工单';
+
+  if (val === 'anew') {
+    await taskInfo({ clearDesc: true });
+    getUserList();
+    return;
+  }
+
+  taskId.value = '';
 }
 
 /** 提交按钮 */
@@ -424,27 +426,26 @@ const getUserList = () => {
   });
 };
 // 获取工单详情
-const taskInfo = () => {
-  let dataArr = [];
-  let obj = {};
-  getTask(taskId.value).then((response) => {
-    form.value = response.data;
-  });
-  // 获取货道列表
-  getTaskDetails(taskId.value).then((res) => {
-    detailData.value = res.data;
-    detailData.value.map((taskDetail) => {
-      obj = {
-        channelCode: taskDetail.channelCode,
-        expectCapacity: taskDetail.expectCapacity,
-        skuId: taskDetail.skuId,
-        skuName: taskDetail.skuName,
-        skuImage: taskDetail.skuImage,
-      };
-      dataArr.push(obj);
-    });
-    form.value.details = dataArr;
-  });
+const taskInfo = async (options = {}) => {
+  const [taskRes, detailsRes] = await Promise.all([
+    getTask(taskId.value),
+    getTaskDetails(taskId.value),
+  ]);
+
+  form.value = taskRes.data;
+  if (options.clearDesc) {
+    form.value.desc = null;
+  }
+
+  const rows = detailsRes.data || [];
+  detailData.value = rows;
+  form.value.details = rows.map((taskDetail) => ({
+    channelCode: taskDetail.channelCode,
+    expectCapacity: taskDetail.expectCapacity,
+    skuId: taskDetail.skuId,
+    skuName: taskDetail.skuName,
+    skuImage: taskDetail.skuImage,
+  }));
 };
 // 查看详情
 const openTaskDetailDialog = (row) => {
