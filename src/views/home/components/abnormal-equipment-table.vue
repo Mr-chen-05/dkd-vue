@@ -2,30 +2,49 @@
   <div class="box abnormal-equipment">
     <div class="header">
       <div class="title">异常设备监控</div>
-      <!-- 刷新按钮 -->
-      <el-button
-        class="refresh-btn"
-        circle
-        :loading="loading"
-        :disabled="loading"
-        @click="reloadList()"
-        type="text"
-        style="color:#000"
-        title="刷新异常设备列表"
-      >
-        <el-icon><RefreshRight /></el-icon>
-      </el-button>
-      <el-dropdown @command="handleCommand" trigger="click">
-        <el-icon class="dropdown-icon"><MoreFilled /></el-icon>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="createTask">
-              <el-icon><CirclePlus /></el-icon>
-              一键创建工单
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <div class="header-actions">
+        <el-switch
+          v-model="autoRefreshEnabled"
+          size="small"
+          active-text="自动刷新"
+          inactive-text="手动"
+        />
+        <div class="interval-setting">
+          <el-input-number
+            v-model="autoRefreshInterval"
+            size="small"
+            :min="3"
+            :max="60"
+            :step="1"
+            :disabled="!autoRefreshEnabled"
+            controls-position="right"
+          />
+          <span class="interval-unit">秒</span>
+        </div>
+        <el-button
+          class="refresh-btn"
+          circle
+          :loading="loading"
+          :disabled="loading"
+          @click="reloadList()"
+          type="text"
+          style="color:#000"
+          title="刷新异常设备列表"
+        >
+          <el-icon><RefreshRight /></el-icon>
+        </el-button>
+        <el-dropdown @command="handleCommand" trigger="click">
+          <el-icon class="dropdown-icon"><MoreFilled /></el-icon>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="createTask">
+                <el-icon><CirclePlus /></el-icon>
+                一键创建工单
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
     <el-scrollbar v-if="listData.length" class="scrollbar body">
       <el-table
@@ -88,7 +107,7 @@
   </div>
 </template>
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
 import {
@@ -105,10 +124,42 @@ import request from "@/utils/request";
 const router = useRouter();
 const listData = ref([]);
 const loading = ref(true);
+const autoRefreshTimer = ref(null);
+const autoRefreshEnabled = ref(true);
+const autoRefreshInterval = ref(5);
 
 onMounted(async () => {
   // 首次加载，调用统一的刷新方法
   await reloadList();
+  startAutoRefresh();
+});
+
+onBeforeUnmount(() => {
+  stopAutoRefresh();
+});
+
+const startAutoRefresh = () => {
+  stopAutoRefresh();
+  if (!autoRefreshEnabled.value) {
+    return;
+  }
+  const intervalMs = Math.max(3, autoRefreshInterval.value) * 1000;
+  autoRefreshTimer.value = setInterval(() => {
+    if (!loading.value) {
+      reloadList();
+    }
+  }, intervalMs);
+};
+
+const stopAutoRefresh = () => {
+  if (autoRefreshTimer.value) {
+    clearInterval(autoRefreshTimer.value);
+    autoRefreshTimer.value = null;
+  }
+};
+
+watch([autoRefreshEnabled, autoRefreshInterval], () => {
+  startAutoRefresh();
 });
 
 // 刷新异常设备列表（支持限制条数）
@@ -474,6 +525,23 @@ const handleCreateBatchTask = async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .interval-setting {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .interval-unit {
+      color: #909399;
+      font-size: 12px;
+    }
 
     .refresh-btn {
       margin-right: 8px;
